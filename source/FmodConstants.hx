@@ -26,6 +26,7 @@ class FmodSFX {
     public static inline var Crumble:String = "event:/SFX/Environment/Crumble";
     public static inline var Type:String = "event:/SFX/Hud/Type";
     public static inline var Typewriter:String = "event:/SFX/Hud/Typewriter";
+    public static inline var TypewriterFast:String = "event:/SFX/Hud/TypewriterFast";
     public static inline var MenuHover:String = "event:/SFX/Menu/MenuHover";
     public static inline var MenuSelect:String = "event:/SFX/Menu/MenuSelect";
     public static inline var CollectCoin:String = "event:/SFX/Player/Collect/CollectCoin";
@@ -54,7 +55,6 @@ class FmodSFX {
     public static inline var PlayerPurchase:String = "event:/SFX/Player/Purchase/PlayerPurchase";
     public static inline var PlayerPurchaseFail:String = "event:/SFX/Player/Purchase/PlayerPurchaseFail";
     public static inline var ShovelEnemyImpact:String = "event:/SFX/Player/Shovel/ShovelEnemyImpact";
-    public static inline var ShovelEnemyImpactHighBass:String = "event:/SFX/Player/Shovel/ShovelEnemyImpactHighBass";
     public static inline var ShovelEnemyImpactHigherBass:String = "event:/SFX/Player/Shovel/ShovelEnemyImpactHigherBass";
     public static inline var ShovelSwing:String = "event:/SFX/Player/Shovel/ShovelSwing";
     public static inline var PlayerAlmostDead:String = "event:/SFX/Player/TakeDamage/PlayerAlmostDead";

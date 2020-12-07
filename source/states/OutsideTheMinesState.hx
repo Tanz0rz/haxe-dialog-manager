@@ -1,5 +1,6 @@
 package states;
 
+import flixel.input.keyboard.FlxKey;
 import dialogbox.Dialogs.DialogId;
 import entities.GameState;
 import entities.HitboxTextInteract;
@@ -89,6 +90,11 @@ class OutsideTheMinesState extends BaseState
 
 	public function stopTypingSound() {
 		FmodManager.StopSoundImmediately(typewriterSoundId);
+	}
+
+	public function speedupTypingSound() {
+		FmodManager.StopSoundImmediately(typewriterSoundId);
+		FmodManager.PlaySoundAndAssignId(FmodSFX.TypewriterFast, typewriterSoundId);
 	}
 
 	override public function create()
@@ -216,7 +222,8 @@ class OutsideTheMinesState extends BaseState
 		add(worldGroup);
 		add(uiGroup);
 
-		dialogManager = new DialogManager(this, uiCamera, playTypingSound, stopTypingSound);
+		dialogManager = new DialogManager(this, uiCamera, FlxKey.SPACE, playTypingSound, stopTypingSound, speedupTypingSound);
+		add(dialogManager);
 
 		if (skipIntro || player.hasUpgrade("Shovel")){
 			camera.fade(FlxColor.BLACK, 1.5, true);

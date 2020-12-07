@@ -1,4 +1,4 @@
-package dialogbox;
+package;
 
 import flixel.FlxBasic;
 import haxe.Timer;
@@ -58,7 +58,7 @@ class DialogManager extends FlxBasic {
         _parentState.add(typeText);
     }
 
-    public function loadDialog(id:Dynamic){
+    public function loadDialog(id:String){
         if (dialogMap[id] == null) {
             trace("Key not found for dialog");
             return;

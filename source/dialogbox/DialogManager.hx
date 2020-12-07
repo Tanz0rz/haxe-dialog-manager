@@ -4,7 +4,6 @@ import flixel.FlxBasic;
 import haxe.Timer;
 import flixel.FlxG;
 import flixel.addons.text.FlxTypeText;
-import dialogbox.Dialogs.DialogId;
 import flixel.FlxCamera;
 import flixel.input.keyboard.FlxKey;
 import flixel.FlxState;
@@ -15,19 +14,21 @@ class DialogManager extends FlxBasic {
     static inline final FontSize = 10;
     
     var currentDialogIndex:Int = -1;
-    var currentDialogId:DialogId = NoId;
+    var currentDialogId:String = "";
 
     // constants
     static inline final CharactersPerTextBox = 100;
     static inline final NextPageDelayMs = 4000;
     static inline final NextPageInputDelayMs = 500;
 
+    var dialogMap:Map<String, Array<String>>;
     var progressionKey:FlxKey;
     public var typeText:FlxTypeText;
 
     var pages:Array<String>;
     var currentPage:Int = 0;
     var typing:Bool;
+    var fastTyping:Bool = false;
     var canManuallyTriggerNextPage:Bool;
 
     // Optional callbacks
@@ -36,12 +37,14 @@ class DialogManager extends FlxBasic {
     var onTypingSpeedUp:() -> Void;
 
     // Keep references to the timers to reset them whenever a new page of text starts
-    var autoProgressTimer:Timer;
-    var manuallyProgressTimer:Timer;
+    // Setting them to real timers to avoid null reference exceptions in code
+    var autoProgressTimer:Timer = new Timer(1000);
+    var manuallyProgressTimer:Timer = new Timer(1000);
 
-    public function new(_parentState:FlxState, _camera:FlxCamera, ?_progressionKey:FlxKey = null, ?_onTypingBegin:() -> Void = null, ?_onTypingEnd:() -> Void = null, ?_onTypingSpeedUp:() -> Void = null) {
+    public function new(_dialogMap:Map<String, Array<String>>, _parentState:FlxState, _camera:FlxCamera, ?_progressionKey:FlxKey = null, ?_onTypingBegin:() -> Void = null, ?_onTypingEnd:() -> Void = null, ?_onTypingSpeedUp:() -> Void = null) {
         super();
-        
+
+        dialogMap = _dialogMap;
         progressionKey = _progressionKey;
         onTypingBegin = _onTypingBegin;
         onTypingEnd = _onTypingEnd;
@@ -55,20 +58,26 @@ class DialogManager extends FlxBasic {
         _parentState.add(typeText);
     }
 
-    public function loadDialog(id:DialogId){
-        if (Dialogs.DialogMap[id] == null) {
+    public function loadDialog(id:Dynamic){
+        if (dialogMap[id] == null) {
             trace("Key not found for dialog");
             return;
         }
-        pages = parseTextIntoPages(Dialogs.DialogMap[id].copy());
+        pages = parseTextIntoPages(dialogMap[id].copy());
         typeText.resetText(pages[0]);
         startTyping();
         currentDialogId = id;
     }
     
     public function startTyping():Void {
+        
         typing = true;
-        typeText.showCursor = false;
+        fastTyping = false;
+        typeText.showCursor = false;        
+        canManuallyTriggerNextPage = false;
+        autoProgressTimer.stop();
+        manuallyProgressTimer.stop();
+
         typeText.start(.05, true, false, [], () -> {
             typing = false;
             typeText.showCursor = true;
@@ -94,10 +103,6 @@ class DialogManager extends FlxBasic {
     }
 
     public function continueToNextPage():Void {
-        canManuallyTriggerNextPage = false;
-        autoProgressTimer.stop();
-        manuallyProgressTimer.stop();
-
         currentPage++;
         if (currentPage >= pages.length){
             completeDialog();
@@ -111,7 +116,12 @@ class DialogManager extends FlxBasic {
         // Due to a bug with FlxTypeText, resetting the text to a single space is the cleanest way to make it invisible
         typeText.resetText(" ");
         typeText.start(.05, true);
-        typeText.showCursor = false;
+        
+        fastTyping = false;
+        typeText.showCursor = false;        
+        canManuallyTriggerNextPage = false;
+        autoProgressTimer.stop();
+        manuallyProgressTimer.stop();
     }
 
     private function parseTextIntoPages(_textList:Array<String>):Array<String> {
@@ -140,7 +150,8 @@ class DialogManager extends FlxBasic {
         super.update(delta);
         
         if(progressionKey != null){
-            if (typing && FlxG.keys.anyJustPressed([progressionKey])){
+            if (typing && !fastTyping && FlxG.keys.anyJustPressed([progressionKey])){
+                fastTyping = true;
                 typeText.delay = 0.025;
                 if (onTypingSpeedUp != null){
                     onTypingSpeedUp();
@@ -157,7 +168,7 @@ class DialogManager extends FlxBasic {
         return currentDialogIndex;
 	}
 
-	public function getCurrentDialogId():DialogId {
+	public function getCurrentDialogId():String {
         return currentDialogId;
 	}
 

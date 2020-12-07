@@ -1,7 +1,6 @@
 package states;
 
 import flixel.input.keyboard.FlxKey;
-import dialogbox.Dialogs.DialogId;
 import entities.GameState;
 import entities.HitboxTextInteract;
 import interactables.HeartJar;
@@ -20,6 +19,7 @@ import haxe.Timer;
 import flixel.tweens.FlxTween;
 import shaders.MosaicManager;
 import dialogbox.DialogManager;
+import Dialogs;
 import entities.Rope;
 import flixel.FlxCamera;
 import flixel.group.FlxGroup;
@@ -222,28 +222,28 @@ class OutsideTheMinesState extends BaseState
 		add(worldGroup);
 		add(uiGroup);
 
-		dialogManager = new DialogManager(this, uiCamera, FlxKey.SPACE, playTypingSound, stopTypingSound, speedupTypingSound);
+		dialogManager = new DialogManager(Dialogs.DialogMap, this, uiCamera, FlxKey.SPACE, playTypingSound, stopTypingSound, speedupTypingSound);
 		add(dialogManager);
 
 		if (skipIntro || player.hasUpgrade("Shovel")){
 			camera.fade(FlxColor.BLACK, 1.5, true);
 			uiCamera.fade(FlxColor.BLACK, 1.5, true);
 			
-			dialogManager.loadDialog(Intro);
+			dialogManager.loadDialog(DialogIntro.getName());
 
 			TextPop.pop(Std.int(player.x-80), Std.int(player.y), "Headlamp recharged", new SlowFadeUp(FlxColor.WHITE, 4), 10);
 			FmodManager.PlaySoundOneShot(FmodSFX.LightRecharge);
 
 			if (Statics.PlayerDied){
 				Statics.PlayerDied = false;
-				dialogManager.loadDialog(PlayerDied);
+				dialogManager.loadDialog(DialogPlayerDied.getName());
 				var lostMoney = Std.int(Player.state.money / 2);
 				Player.state.money -= lostMoney;
 				TextPop.pop(Std.int(player.x-15), Std.int(player.y+20), "-$" +lostMoney, new SlowFadeUp(FlxColor.RED, 4), 10);
 			} else if (Statics.CurrentLightRadius > Statics.minLightRadius && Statics.CurrentLightRadius <= Statics.minLightRadius+20) {
-				dialogManager.loadDialog(PlayerAlmostRanOutOfLight);
+				dialogManager.loadDialog(DialogPlayerAlmostRanOutOfLight.getName());
 			} else if (Statics.CurrentLightRadius <= Statics.minLightRadius) {
-				dialogManager.loadDialog(PlayerRanOutOfLight);
+				dialogManager.loadDialog(DialogPlayerRanOutOfLight.getName());
 				var lostMoney = Std.int(Player.state.money / 2);
 				Player.state.money -= lostMoney;
 				TextPop.pop(Std.int(player.x-15), Std.int(player.y+20), "-$" +lostMoney, new SlowFadeUp(FlxColor.RED, 4), 10);
@@ -284,7 +284,7 @@ class OutsideTheMinesState extends BaseState
 						uiCamera.setFilters([]);
 
 						Timer.delay(() -> {
-							dialogManager.loadDialog(FakeIntro);
+							dialogManager.loadDialog(DialogFakeIntro.getName());
 							player.animation.play("faceplant_get_up");
 						}, standUpDelay);
 					};
@@ -327,39 +327,39 @@ class OutsideTheMinesState extends BaseState
 		var currentDialogId = dialogManager.getCurrentDialogId();
 
 		// Only render the shop text dialog if there is nothing else going on and the player is browsing for what to buy
-		if ((currentDialogId != MatterConverterDescription &&
-			currentDialogId != ShovelDescription &&
-			currentDialogId != AxeDescription &&
-			currentDialogId != HeartJarDescription &&
-			currentDialogId != SpeedClogDescription &&
-			currentDialogId != LedDescription)
+		if ((currentDialogId != DialogMatterConverterDescription.getName() &&
+			currentDialogId != DialogShovelDescription.getName() &&
+			currentDialogId != DialogAxeDescription.getName() &&
+			currentDialogId != DialogHeartJarDescription.getName() &&
+			currentDialogId != DialogSpeedClogDescription.getName() &&
+			currentDialogId != DialogLedDescription.getName())
 				&& !dialogManager.isDone()) {
 				return;
 		}
 
-		var dialogId = NoId;
+		var dialogId = "";
 		switch(interactable.name){
 			case "Matter Converter":
-				dialogId = MatterConverterDescription;
+				dialogId = DialogMatterConverterDescription.getName();
 			case "Heart Jar":
-				dialogId = HeartJarDescription;
+				dialogId = DialogHeartJarDescription.getName();
 			case "SpeedClog":
-				dialogId = SpeedClogDescription;
+				dialogId = DialogSpeedClogDescription.getName();
 			case "Pickaxe":
-				dialogId = AxeDescription;
+				dialogId = DialogAxeDescription.getName();
 			case "Shovel":
-				dialogId = ShovelDescription;
+				dialogId = DialogShovelDescription.getName();
 			case "LED Bulb":
-				dialogId = LedDescription;
+				dialogId = DialogLedDescription.getName();
 			default:
 		}
 
-		if (dialogId != NoId) {
+		if (dialogId != "") {
 			loadDialogIfPossible(dialogId);
 		}
 	}
 
-	private function loadDialogIfPossible(dialogId:DialogId) {
+	private function loadDialogIfPossible(dialogId:String) {
 		if (dialogManager.getCurrentDialogId() != dialogId || dialogManager.isDone()) {
 			dialogManager.loadDialog(dialogId);
 		}
@@ -374,7 +374,7 @@ class OutsideTheMinesState extends BaseState
 					TextPop.pop(Std.int(200), Std.int(140), "You aren't ready", new SlowFadeUp(FlxColor.RED), 10);
 					FmodManager.PlaySoundOneShot(FmodSFX.PlayerPurchaseFail);
 					if (dialogManager.isDone()){
-						dialogManager.loadDialog(ShovelRequired);
+						dialogManager.loadDialog(DialogShovelRequired.getName());
 					}
 				} else if (!isTransitioningStates){
 					isTransitioningStates = true;
@@ -407,17 +407,17 @@ class OutsideTheMinesState extends BaseState
 						var ledIndex = 16;
 
 						if (interactable.name == "Shovel") {
-							dialogManager.loadDialog(ShovelPurchased);
+							dialogManager.loadDialog(DialogShovelPurchased.getName());
 						} else if (interactable.name == "Matter Converter") {
-							dialogManager.loadDialog(MatterConverterPurchased);
+							dialogManager.loadDialog(DialogMatterConverterPurchased.getName());
 						}  else if (interactable.name == "Heart Jar") {
-							dialogManager.loadDialog(HeartJarPurchased);
+							dialogManager.loadDialog(DialogHeartJarPurchased.getName());
 						}  else if (interactable.name == "SpeedClog") {
-							dialogManager.loadDialog(SpeedClogPurchased);
+							dialogManager.loadDialog(DialogSpeedClogPurchased.getName());
 						}  else if (interactable.name == "Pickaxe") {
-							dialogManager.loadDialog(AxePurchased);
+							dialogManager.loadDialog(DialogAxePurchased.getName());
 						} else if (interactable.name == "LED Bulb") {
-							dialogManager.loadDialog(LedPurchased);
+							dialogManager.loadDialog(DialogLedPurchased.getName());
 						}
 					} else {
 						TextPop.pop(Std.int(player.x), Std.int(player.y), "Not enough money", new SlowFade(FlxColor.RED), 10);

@@ -11,112 +11,134 @@ import hx.concurrent.executor.Executor;
 class Dialogbox extends FlxBasic {
     // constants
     static inline final CharactersPerTextBox = 100;
-    static inline final FontSize = 10;
+    static inline final NextPageDelayMs = 4000;
+    static inline final NextPageInputDelayMs = 500;
 
-    var nextPageDelayMs = 4000;
-    var nextPageTimer:Timer;
+    public var typeText:FlxTypeText;
+    var progressionKey:FlxKey;
+    var onTypingBegin:() -> Void;
+    var onTypingEnd:() -> Void;
 
-    // caller's state so we can add our FlxTypeText to the game loop
-    var parentState:FlxState;
-    var dialogManager:DialogManager;
-
-    var isTyping:Bool;
-    var canContinueToNextPage:Bool;
     var pages:Array<String>;
     var currentPage:Int = 0;
+    var typing:Bool;
+    var canManuallyTriggerNextPage:Bool;
 
-    public var flxTypeText:FlxTypeText;
-    var progressionKey:FlxKey;
+    // Keep references to the timers to reset them whenever a new page of text starts
+    var autoProgressTimer:Timer;
+    var manuallyProgressTimer:Timer;
 
-    public function new(parentState:FlxState, _dialogManager:DialogManager, textList:Array<String>, progressionKey:FlxKey, monospacedFontAssetPath:Null<String>) {
+    public function new( _typeText:FlxTypeText, ?_progressionKey:FlxKey = null, ?_onTypingBegin:() -> Void = null, ?_onTypingEnd:() -> Void = null) {
         super();
-        this.progressionKey = progressionKey;
-        pages = new Array<String>();
+        progressionKey = _progressionKey;
+        typeText = _typeText;
+        onTypingBegin = _onTypingBegin;
+        onTypingEnd = _onTypingEnd;
+    }
 
-        dialogManager = _dialogManager;
+    public function loadDialog(textList:Array<String>) {
+        pages = parseTextIntoPages(textList);
+        typeText.resetText(pages[0]);
+        startTyping();
+    }
+    
+    public function startTyping():Void {
+        typing = true;
+        typeText.showCursor = false;
+        typeText.start(.05, true, false, [], () -> {
+            typing = false;
+            typeText.showCursor = true;
 
+            if (onTypingEnd != null){
+                onTypingEnd();
+            }
+
+            // After NextPageDelayMs, the next page of text will be loaded
+            autoProgressTimer = Timer.delay(() -> {
+                continueToNextPage();
+            }, NextPageDelayMs);
+
+            // After NextPageInputDelayMs, the user can press a button to continue to the next page instead of waiting
+            manuallyProgressTimer = Timer.delay(() -> {
+                canManuallyTriggerNextPage = true;
+            }, NextPageInputDelayMs);
+        });
+
+        if (onTypingBegin != null){
+            onTypingBegin();
+        }
+    }
+
+    private function parseTextIntoPages(_textList:Array<String>):Array<String> {
+        var pageArray = new Array<String>();
         var currentPageBuffer:StringBuf;
-        for(text in textList){
+
+        for(text in _textList){
             currentPageBuffer = new StringBuf();
             for (i in 0...text.length) {
                 if (i % CharactersPerTextBox == 0 && i != 0){
-                    pages.push(currentPageBuffer.toString());
+                    pageArray.push(currentPageBuffer.toString());
                     currentPageBuffer = new StringBuf();
                 }
                 currentPageBuffer.add(text.charAt(i));
 
                 if (i == text.length-1){
-                    pages.push(currentPageBuffer.toString());
+                    pageArray.push(currentPageBuffer.toString());
                 }
             }
         }
 
-        flxTypeText = new FlxTypeText(20, 30, FlxG.width-20, pages[0], 1);
-        flxTypeText.setFormat(monospacedFontAssetPath, FontSize);
-        parentState.add(flxTypeText);
-		flxTypeText.scrollFactor.set(0, 0);
-        startTyping();
-    }
-
-    override public function kill() {
-        if (nextPageTimer != null){
-            nextPageTimer.stop();
-        }
-        super.kill();
-    }
-
-	override public function update(elapsed:Float) {
-        super.update(elapsed);
-    }
-
-    public function startTyping():Void {
-
-        isTyping = true;
-
-        // Callbacks cannot be set outside of the start() function...
-        var callback = function() {
-            allowNextPage();
-            isTyping = false;
-        }
-        flxTypeText.start(.05, false, false, [], callback);
+        return pageArray;
     }
 
     public function continueToNextPage():Void {
-        nextPageTimer.stop();
-        canContinueToNextPage = false;
+        canManuallyTriggerNextPage = false;
+        autoProgressTimer.stop();
+        manuallyProgressTimer.stop();
 
         currentPage++;
         if (currentPage >= pages.length){
-            dialogManager.isDone = true;
-            flxTypeText.destroy();
-            destroy();
+            completeDialog();
         } else {
-            flxTypeText.resetText(pages[currentPage]);
+            typeText.resetText(pages[currentPage]);
             startTyping();
         }
     }
 
-    public function allowNextPage():Void {
-        // The text-skip button and next-page button are the same, so we add a slight delay here to separate the two commands
-        var executor = Executor.create(1);
-        var allowNextPage=function():Void {
-            canContinueToNextPage = true;
+    public function completeDialog() {
+        // Due to a bug with FlxTypeText, resetting the text to a single space is the cleanest way to make it invisible
+        typeText.resetText(" ");
+        typeText.start(.05, true);
+        typeText.showCursor = false;
+    }
 
-            var timer = nextPageDelayMs;
-            if (pages[currentPage].length < 10) {
-                timer = Std.int(nextPageDelayMs / 4);
+    public function isTyping():Bool {
+		return typing;
+    }
+    
+    public function isDone():Bool {
+        // Text is set to a space when it is completely done with the current dialog
+        return typeText.text == " ";
+    }
+
+	override public function update(delta:Float):Void {
+        super.update(delta);
+        
+        if(progressionKey != null){
+            if (typing && FlxG.keys.anyJustPressed([progressionKey])){
+                typeText.delay = 0.025;
             }
-            nextPageTimer = new Timer(timer);
-            nextPageTimer.run = continueToNextPage;
+    
+            if (canManuallyTriggerNextPage && FlxG.keys.anyJustPressed([progressionKey])) {
+                continueToNextPage();
+            }
         }
-        executor.submit(allowNextPage, ONCE(10));
     }
 
-    public function getIsTyping():Bool {
-		return isTyping;
-    }
-
-    public function getFlxTypeText():FlxTypeText {
-		return flxTypeText;
+    override public function destroy(){
+        super.destroy();
+        if (onTypingEnd != null){
+            onTypingEnd();
+        }
     }
 }

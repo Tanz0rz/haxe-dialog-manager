@@ -1,5 +1,6 @@
 package states;
 
+import dialogbox.Dialogs.DialogId;
 import entities.GameState;
 import entities.HitboxTextInteract;
 import interactables.HeartJar;
@@ -78,6 +79,16 @@ class OutsideTheMinesState extends BaseState
 	public function new(?_skipIntro:Bool = false) {
 		skipIntro = _skipIntro;
 		super();
+	}
+
+	public static inline var typewriterSoundId = "TypewriterSound";
+
+	public function playTypingSound() {
+		FmodManager.PlaySoundAndAssignId(FmodSFX.Typewriter, typewriterSoundId);
+	}
+
+	public function stopTypingSound() {
+		FmodManager.StopSoundImmediately(typewriterSoundId);
 	}
 
 	override public function create()
@@ -205,27 +216,27 @@ class OutsideTheMinesState extends BaseState
 		add(worldGroup);
 		add(uiGroup);
 
-		dialogManager = new DialogManager(this, uiCamera);
+		dialogManager = new DialogManager(this, uiCamera, playTypingSound, stopTypingSound);
 
 		if (skipIntro || player.hasUpgrade("Shovel")){
 			camera.fade(FlxColor.BLACK, 1.5, true);
 			uiCamera.fade(FlxColor.BLACK, 1.5, true);
+			
+			dialogManager.loadDialog(Intro);
 
 			TextPop.pop(Std.int(player.x-80), Std.int(player.y), "Headlamp recharged", new SlowFadeUp(FlxColor.WHITE, 4), 10);
 			FmodManager.PlaySoundOneShot(FmodSFX.LightRecharge);
 
 			if (Statics.PlayerDied){
 				Statics.PlayerDied = false;
-				dialogManager.loadDialog(3);
+				dialogManager.loadDialog(PlayerDied);
 				var lostMoney = Std.int(Player.state.money / 2);
 				Player.state.money -= lostMoney;
 				TextPop.pop(Std.int(player.x-15), Std.int(player.y+20), "-$" +lostMoney, new SlowFadeUp(FlxColor.RED, 4), 10);
-			} else if (!player.hasUpgrade("Shovel")){
-				dialogManager.loadDialog(0);
 			} else if (Statics.CurrentLightRadius > Statics.minLightRadius && Statics.CurrentLightRadius <= Statics.minLightRadius+20) {
-				dialogManager.loadDialog(4);
+				dialogManager.loadDialog(PlayerAlmostRanOutOfLight);
 			} else if (Statics.CurrentLightRadius <= Statics.minLightRadius) {
-				dialogManager.loadDialog(15);
+				dialogManager.loadDialog(PlayerRanOutOfLight);
 				var lostMoney = Std.int(Player.state.money / 2);
 				Player.state.money -= lostMoney;
 				TextPop.pop(Std.int(player.x-15), Std.int(player.y+20), "-$" +lostMoney, new SlowFadeUp(FlxColor.RED, 4), 10);
@@ -266,7 +277,7 @@ class OutsideTheMinesState extends BaseState
 						uiCamera.setFilters([]);
 
 						Timer.delay(() -> {
-							dialogManager.loadDialog(0);
+							dialogManager.loadDialog(FakeIntro);
 							player.animation.play("faceplant_get_up");
 						}, standUpDelay);
 					};
@@ -289,9 +300,9 @@ class OutsideTheMinesState extends BaseState
 
 		FlxG.collide(currentLevel.navigationLayer, player);
 
-		if (dialogManager != null){
-			dialogManager.update();
-		}
+		// if (dialogManager != null){
+		// 	dialogManager.update();
+		// }
 
 		moneyText.text = "" + Player.state.money;
 		playerHealthText.text = "" + player.health;
@@ -306,52 +317,44 @@ class OutsideTheMinesState extends BaseState
 
 	private function renderDialog(interactable:Interactable, hitboxTextInteract:HitboxTextInteract) {
 
-		var currentDialogIndex = dialogManager.getCurrentDialogIndex();
-
-
-		var matterConverterDialogIndex = 5;
-		var speedClogDialogIndex = 6;
-		var heartJarDialogIndex = 7;
-		var axeDialogIndex = 8;
-		var shovelDialogIndex = 13;
-		var bulbDialogIndex = 14;
+		var currentDialogId = dialogManager.getCurrentDialogId();
 
 		// Only render the shop text dialog if there is nothing else going on and the player is browsing for what to buy
-		if ((currentDialogIndex != matterConverterDialogIndex &&
-			currentDialogIndex != speedClogDialogIndex &&
-			currentDialogIndex != heartJarDialogIndex &&
-			currentDialogIndex != axeDialogIndex &&
-			currentDialogIndex != bulbDialogIndex &&
-			currentDialogIndex != shovelDialogIndex)
-				&& !dialogManager.isDone) {
+		if ((currentDialogId != MatterConverterDescription &&
+			currentDialogId != ShovelDescription &&
+			currentDialogId != AxeDescription &&
+			currentDialogId != HeartJarDescription &&
+			currentDialogId != SpeedClogDescription &&
+			currentDialogId != LedDescription)
+				&& !dialogManager.isDone()) {
 				return;
 		}
 
-		var index = -1;
+		var dialogId = NoId;
 		switch(interactable.name){
 			case "Matter Converter":
-				index = matterConverterDialogIndex;
+				dialogId = MatterConverterDescription;
 			case "Heart Jar":
-				index = speedClogDialogIndex;
+				dialogId = HeartJarDescription;
 			case "SpeedClog":
-				index = heartJarDialogIndex;
+				dialogId = SpeedClogDescription;
 			case "Pickaxe":
-				index = axeDialogIndex;
+				dialogId = AxeDescription;
 			case "Shovel":
-				index = shovelDialogIndex;
+				dialogId = ShovelDescription;
 			case "LED Bulb":
-				index = bulbDialogIndex;
+				dialogId = LedDescription;
 			default:
 		}
 
-		if (index != -1) {
-			loadDialogIfPossible(interactable.cost, index);
+		if (dialogId != NoId) {
+			loadDialogIfPossible(dialogId);
 		}
 	}
 
-	private function loadDialogIfPossible(cost:Int, dialogIndex:Int) {
-		if (dialogManager.getCurrentDialogIndex() != dialogIndex || dialogManager.isDone) {
-			dialogManager.loadDialog(dialogIndex, cost);
+	private function loadDialogIfPossible(dialogId:DialogId) {
+		if (dialogManager.getCurrentDialogId() != dialogId || dialogManager.isDone()) {
+			dialogManager.loadDialog(dialogId);
 		}
 	}
 
@@ -363,12 +366,11 @@ class OutsideTheMinesState extends BaseState
 				if (!player.hasUpgrade("Shovel")) {
 					TextPop.pop(Std.int(200), Std.int(140), "You aren't ready", new SlowFadeUp(FlxColor.RED), 10);
 					FmodManager.PlaySoundOneShot(FmodSFX.PlayerPurchaseFail);
-					if (dialogManager.isDone){
-						dialogManager.loadDialog(1);
+					if (dialogManager.isDone()){
+						dialogManager.loadDialog(ShovelRequired);
 					}
 				} else if (!isTransitioningStates){
 					isTransitioningStates = true;
-					dialogManager.stopSounds();
 					player.animation.play("climb_down");
 					camera.fade(FlxColor.BLACK, 2, false, null, true);
 					uiCamera.fade(FlxColor.BLACK, 2, false, null, true);
@@ -398,17 +400,17 @@ class OutsideTheMinesState extends BaseState
 						var ledIndex = 16;
 
 						if (interactable.name == "Shovel") {
-							dialogManager.loadDialog(shovelBoughtIndex);
+							dialogManager.loadDialog(ShovelPurchased);
 						} else if (interactable.name == "Matter Converter") {
-							dialogManager.loadDialog(matterConverterBoughtIndex);
+							dialogManager.loadDialog(MatterConverterPurchased);
 						}  else if (interactable.name == "Heart Jar") {
-							dialogManager.loadDialog(heartJarIndex);
+							dialogManager.loadDialog(HeartJarPurchased);
 						}  else if (interactable.name == "SpeedClog") {
-							dialogManager.loadDialog(speedClogIndex);
+							dialogManager.loadDialog(SpeedClogPurchased);
 						}  else if (interactable.name == "Pickaxe") {
-							dialogManager.loadDialog(axeIndex);
+							dialogManager.loadDialog(AxePurchased);
 						} else if (interactable.name == "LED Bulb") {
-							dialogManager.loadDialog(ledIndex);
+							dialogManager.loadDialog(LedPurchased);
 						}
 					} else {
 						TextPop.pop(Std.int(player.x), Std.int(player.y), "Not enough money", new SlowFade(FlxColor.RED), 10);

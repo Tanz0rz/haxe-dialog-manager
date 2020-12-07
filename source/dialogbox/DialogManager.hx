@@ -1,5 +1,8 @@
 package dialogbox;
 
+import flixel.FlxG;
+import flixel.addons.text.FlxTypeText;
+import dialogbox.Dialogs.DialogId;
 import flixel.FlxCamera;
 import haxefmod.FmodEvents.FmodCallback;
 import haxefmod.FmodEvents.FmodEvent;
@@ -9,72 +12,51 @@ import flixel.FlxState;
 
 class DialogManager {
 
-    public var isDone:Bool = true;
+    static inline final FontSize = 10;
+    
     var currentDialogIndex:Int = -1;
+    var currentDialogId:DialogId = NoId;
+    var dialogBox:Dialogbox;
 
-    var typewriterSoundId:String = "typewriterSoundId";
-    var typeText:Dialogbox;
-    var parentState:FlxState;
-    var renderCamera:FlxCamera;
-    var disableSounds:Bool;
+    var typeText:FlxTypeText;
+    
 
+    public function new(_parentState:FlxState, _camera:FlxCamera, ?_onTypingBegin:() -> Void = null, ?_onTypingEnd:() -> Void = null) {
 
-    public function new(_parentState:FlxState, _renderCamera:FlxCamera) {
-        parentState = _parentState;
-        renderCamera = _renderCamera;
+        // Position the text to be roughly centered toward the top of the screen
+        typeText = new FlxTypeText(20, 30, FlxG.width-20, "", FontSize);
+        typeText.setFormat(AssetPaths.joystix_monospace__ttf);
+		typeText.scrollFactor.set(0, 0);
+        typeText.cameras = [_camera];
+        _parentState.add(typeText);
+
+        // Create the dialog box that will be used to hold and type out the text
+        dialogBox = new Dialogbox(typeText, FlxKey.SPACE, _onTypingBegin, _onTypingEnd);
+        _parentState.add(dialogBox);
     }
 
-    public function update() {
-        if (disableSounds || typeText == null){
+    public function loadDialog(id:DialogId){
+        if (Dialogs.DialogMap[id] == null) {
+            trace("Key not found for dialog");
             return;
         }
-
-        if (typeText.getIsTyping()){
-            if (!FmodManager.IsSoundPlaying(typewriterSoundId)){
-                FmodManager.PlaySoundAndAssignId(FmodSFX.Typewriter, typewriterSoundId);
-            }
-        }
-        if (typeText == null || !typeText.getIsTyping()) {
-            if (FmodManager.IsSoundPlaying(typewriterSoundId)){
-                FmodManager.StopSound(typewriterSoundId);
-            }
-        }
-    }
-
-    public function loadDialog(index:Int, cost:Int = -1){
-        isDone = false;
-        if (typeText != null) {
-            typeText.flxTypeText.kill();
-            typeText.kill();
-        }
-        if (index >= Dialogs.DialogArray.length) {
-        trace("index out of bounds for dialogs");
-        return;
-        }
-        var textLines = Dialogs.DialogArray[index].copy();
-        // if (cost != -1) {
-        //     var costText = "$" + cost;
-        //     textLines.insert(0, costText);
-        // }
-        typeText = new Dialogbox(parentState, this, textLines, FlxKey.SPACE, AssetPaths.joystix_monospace__ttf);
-        typeText.cameras = [renderCamera];
-        parentState.add(typeText);
-        currentDialogIndex = index;
+        dialogBox.loadDialog(Dialogs.DialogMap[id].copy());
+        currentDialogId = id;
     }
 
 	public function getCurrentDialogIndex():Int {
         return currentDialogIndex;
 	}
 
-    public function stopSounds() {
-        FmodManager.StopSoundImmediately(typewriterSoundId);
-        disableSounds = true;
-    }
+	public function getCurrentDialogId():DialogId {
+        return currentDialogId;
+	}
 
     public function isTyping():Bool {
-        if (typeText != null) {
-            return typeText.getIsTyping();
-        }
-        return false;
+        return dialogBox.isTyping();
+    }
+
+    public function isDone():Bool {
+        return dialogBox.isDone();
     }
 }

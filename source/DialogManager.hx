@@ -31,13 +31,13 @@ class DialogManager extends FlxBasic {
     var fastTyping:Bool = false;
     var canManuallyTriggerNextPage:Bool;
 
-    // Optional callbacks
+    // Optional callbacks to enable custom sound solutions
     var onTypingBegin:() -> Void;
     var onTypingEnd:() -> Void;
     var onTypingSpeedUp:() -> Void;
 
     // Keep references to the timers to reset them whenever a new page of text starts
-    // Setting them to real timers to avoid null reference exceptions in code
+    // Initialize them to real timers to avoid the need to check for null
     var autoProgressTimer:Timer = new Timer(1000);
     var manuallyProgressTimer:Timer = new Timer(1000);
 
@@ -68,9 +68,30 @@ class DialogManager extends FlxBasic {
         startTyping();
         currentDialogId = id;
     }
+
+    private function parseTextIntoPages(_textList:Array<String>):Array<String> {
+        var pageArray = new Array<String>();
+        var currentPageBuffer:StringBuf;
+
+        for(text in _textList){
+            currentPageBuffer = new StringBuf();
+            for (i in 0...text.length) {
+                if (i % CharactersPerTextBox == 0 && i != 0){
+                    pageArray.push(currentPageBuffer.toString());
+                    currentPageBuffer = new StringBuf();
+                }
+                currentPageBuffer.add(text.charAt(i));
+
+                if (i == text.length-1){
+                    pageArray.push(currentPageBuffer.toString());
+                }
+            }
+        }
+
+        return pageArray;
+    }
     
     public function startTyping():Void {
-        
         typing = true;
         fastTyping = false;
         typeText.showCursor = false;        
@@ -78,6 +99,7 @@ class DialogManager extends FlxBasic {
         autoProgressTimer.stop();
         manuallyProgressTimer.stop();
 
+        // Set onComplete function in-line
         typeText.start(.05, true, false, [], () -> {
             typing = false;
             typeText.showCursor = true;
@@ -104,6 +126,7 @@ class DialogManager extends FlxBasic {
 
     public function continueToNextPage():Void {
         currentPage++;
+        // When there is no more text to display, transition to completed state
         if (currentPage >= pages.length){
             completeDialog();
         } else {
@@ -124,31 +147,10 @@ class DialogManager extends FlxBasic {
         manuallyProgressTimer.stop();
     }
 
-    private function parseTextIntoPages(_textList:Array<String>):Array<String> {
-        var pageArray = new Array<String>();
-        var currentPageBuffer:StringBuf;
-
-        for(text in _textList){
-            currentPageBuffer = new StringBuf();
-            for (i in 0...text.length) {
-                if (i % CharactersPerTextBox == 0 && i != 0){
-                    pageArray.push(currentPageBuffer.toString());
-                    currentPageBuffer = new StringBuf();
-                }
-                currentPageBuffer.add(text.charAt(i));
-
-                if (i == text.length-1){
-                    pageArray.push(currentPageBuffer.toString());
-                }
-            }
-        }
-
-        return pageArray;
-    }
-
 	override public function update(delta:Float):Void {
         super.update(delta);
         
+        // Update loop exclusively handles user input
         if(progressionKey != null){
             if (typing && !fastTyping && FlxG.keys.anyJustPressed([progressionKey])){
                 fastTyping = true;
@@ -177,7 +179,7 @@ class DialogManager extends FlxBasic {
     }
     
     public function isDone():Bool {
-        // Text is set to a space when it is completely done with the current dialog
+        // Text is set to a space when it is done displaying all text pages
         return typeText.text == " ";
     }
 }

@@ -1,4 +1,4 @@
-package;
+package dialogmanager;
 
 import flixel.FlxBasic;
 import haxe.Timer;
@@ -60,7 +60,7 @@ class DialogManager extends FlxBasic {
 
     public function loadDialog(id:String){
         if (dialogMap[id] == null) {
-            trace("Key not found for dialog");
+            trace("id (" + id + ") not found in dialog map");
             return;
         }
         pages = parseTextIntoPages(dialogMap[id].copy());

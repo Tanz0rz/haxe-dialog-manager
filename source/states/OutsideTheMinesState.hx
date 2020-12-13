@@ -43,6 +43,7 @@ import flixel.FlxState;
 import flixel.math.FlxPoint;
 import flixel.FlxObject;
 import interactables.Interactable;
+import dialogmanager.DialogManager;
 
 class OutsideTheMinesState extends BaseState
 {

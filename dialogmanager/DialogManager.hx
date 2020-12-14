@@ -41,7 +41,7 @@ class DialogManager extends FlxBasic {
     var autoProgressTimer:Timer = new Timer(1000);
     var manuallyProgressTimer:Timer = new Timer(1000);
 
-    public function new(_dialogMap:Map<String, Array<String>>, _parentState:FlxState, _camera:FlxCamera, ?_progressionKey:FlxKey = null, ?_onTypingBegin:() -> Void = null, ?_onTypingEnd:() -> Void = null, ?_onTypingSpeedUp:() -> Void = null) {
+    public function new(_dialogMap:Map<String, Array<String>>, _parentState:FlxState, _camera:FlxCamera, ?_progressionKey:FlxKey = FlxKey.NONE, ?_onTypingBegin:() -> Void = null, ?_onTypingEnd:() -> Void = null, ?_onTypingSpeedUp:() -> Void = null) {
         super();
 
         dialogMap = _dialogMap;
@@ -151,7 +151,7 @@ class DialogManager extends FlxBasic {
         super.update(delta);
         
         // Update loop exclusively handles user input
-        if(progressionKey != null){
+        if(progressionKey != FlxKey.NONE){
             if (typing && !fastTyping && FlxG.keys.anyJustPressed([progressionKey])){
                 fastTyping = true;
                 typeText.delay = 0.025;

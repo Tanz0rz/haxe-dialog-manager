@@ -11,7 +11,7 @@ import flixel.FlxState;
 
 class DialogManager extends FlxBasic {
 
-    static inline final FontSize = 10;
+    final fontSize = 10;
     
     var currentDialogIndex:Int = -1;
     var currentDialogId:String = "";
@@ -41,7 +41,7 @@ class DialogManager extends FlxBasic {
     var autoProgressTimer:Timer = new Timer(1000);
     var manuallyProgressTimer:Timer = new Timer(1000);
 
-    public function new(_dialogMap:Map<String, Array<String>>, _parentState:FlxState, _camera:FlxCamera, ?_progressionKey:FlxKey = FlxKey.NONE, ?_onTypingBegin:() -> Void = null, ?_onTypingEnd:() -> Void = null, ?_onTypingSpeedUp:() -> Void = null) {
+    public function new(_dialogMap:Map<String, Array<String>>, _parentState:FlxState, _camera:FlxCamera, ?_progressionKey:FlxKey = FlxKey.NONE, ?_onTypingBegin:() -> Void = null, ?_onTypingEnd:() -> Void = null, ?_onTypingSpeedUp:() -> Void = null, ?_fontSize:Int = null) {
         super();
 
         dialogMap = _dialogMap;
@@ -49,9 +49,13 @@ class DialogManager extends FlxBasic {
         onTypingBegin = _onTypingBegin;
         onTypingEnd = _onTypingEnd;
         onTypingSpeedUp = _onTypingSpeedUp;
+	    
+	if (_fontSize != null) {
+		fontSize = _fontSize;    
+	}
 
         // Position the text to be roughly centered toward the top of the screen
-        typeText = new FlxTypeText(20, 30, FlxG.width-20, "", FontSize);
+        typeText = new FlxTypeText(20, 30, FlxG.width-20, "", fontSize);
         typeText.setFormat(AssetPaths.joystix_monospace__ttf);
 		typeText.scrollFactor.set(0, 0);
         typeText.cameras = [_camera];
@@ -166,13 +170,13 @@ class DialogManager extends FlxBasic {
         }
     }
 
-	public function getCurrentDialogIndex():Int {
+    public function getCurrentDialogIndex():Int {
         return currentDialogIndex;
-	}
+    }
 
-	public function getCurrentDialogId():String {
+    public function getCurrentDialogId():String {
         return currentDialogId;
-	}
+    }
 
     public function isTyping():Bool {
 		return typing;
@@ -181,5 +185,9 @@ class DialogManager extends FlxBasic {
     public function isDone():Bool {
         // Text is set to a space when it is done displaying all text pages
         return typeText.text == " ";
+    }
+	
+    public function getCurrentDialogPage() {
+        return currentPage;	
     }
 }

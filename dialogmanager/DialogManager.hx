@@ -166,13 +166,13 @@ class DialogManager extends FlxBasic {
         }
     }
 
-	public function getCurrentDialogIndex():Int {
+    public function getCurrentDialogIndex():Int {
         return currentDialogIndex;
-	}
+    }
 
-	public function getCurrentDialogId():String {
+    public function getCurrentDialogId():String {
         return currentDialogId;
-	}
+    }
 
     public function isTyping():Bool {
 		return typing;
@@ -181,5 +181,9 @@ class DialogManager extends FlxBasic {
     public function isDone():Bool {
         // Text is set to a space when it is done displaying all text pages
         return typeText.text == " ";
+    }
+	
+    public function getCurrentDialogPage() {
+        return currentPage;	
     }
 }
